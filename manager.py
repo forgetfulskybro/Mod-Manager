@@ -3,7 +3,7 @@ import re
 import json
 import time
 import zipfile
-import requests # type: ignore
+import requests
 import tkinter as tk
 from tkinter import filedialog
 
@@ -227,9 +227,9 @@ if __name__ == '__main__':
                 m = mods[str(mod)]
                 print(f"{m["name"]}: {m["version"]}\nNew Version: {m["updated_version"]}\n")
             print("To turn off this reminder, input \"stop\"\n------------------------------------------")
+
         # DISPLAY MENU
         print("Installing mods under: "+ json.load(open('mods.json', 'r')).get("game"))
-        print("0. Exit")
         print("1. List installed mods in installation order")
         print("2. Install mod(s)")
         print("3. Uninstall mod(s)")
@@ -238,8 +238,6 @@ if __name__ == '__main__':
         # PROCESS USER INPUT
         userInput = input("> ")
         match userInput:
-            case "0": # exit
-                exit()
             case "1": # list mods
                 listMods(True)
             case "2": # install mods
