@@ -210,6 +210,18 @@ def startJsonFile():
         toWrite = '{"game":"' + game_path + '"}'
         with open("mods.json", "w") as outfile:
             outfile.write(toWrite)
+
+        with open("updates.json", "w") as outfile:
+            outfile.write("{}")
+
+        with open("reminder.json", "w") as outfile:
+            outfile.write("{}")       
+
+        with open("env.json", "w") as outfile:
+            print("Enter your Nexus Mods Personal API key. Can be found here: https://next.nexusmods.com/settings/api-keys")
+            userInput = input("> ")
+            outfile.write('{"NEXUS_API_KEY":"' + userInput + '"}')
+            os.system('cls')
     elif json.load(open('mods.json', 'r')).get("game") == None:
         exit("Game directory not found inside mods.json")
 

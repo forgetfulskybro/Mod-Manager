@@ -29,10 +29,10 @@ Drag and drop the script wherever you want, I recommend keeping this script on t
 When launching the script for the first time, a window will prompt asking you to select the game installation path. i.e. C:/SteamLibrary/steamapps/common/Cyberpunk 2077
 
 **[3rd step]**
-Install requests so the script can check for mod updates. Run the following command in your terminal: `pip install requests`.
+After selecting your game installation, you will be prompted to input your Nexus Mods API key. To get your api key, go to https://next.nexusmods.com/settings/api-keys and copy your personal API key.
 
 **[4th step]**
-Edit NEXUS_API_KEY in `env.json` with your Nexus Mods API key. To get your api key, go to https://next.nexusmods.com/settings/api-keys and copy your personal API key.
+Install requests so the script can check for mod updates. Run the following command in your terminal: `pip install requests`.
 
 **[5th step]**
 When installing mods, multiple zips can be selected.
