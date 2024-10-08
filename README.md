@@ -59,20 +59,20 @@ bin
      - CrashReporter
      - d3d12on7
      - plugins
- - cyber_engine_tweaks
- - mods
-    - modToInstall
+        - cyber_engine_tweaks
+            - mods
+                - modToInstall
 
 **or**
 
 modName
-    - bin
-       - x64
-          - CrashReporter
-          - d3d12on7
-          - plugins
-          - cyber_engine_tweaks
-             - mods
+   - bin
+    - x64
+        - CrashReporter
+        - d3d12on7
+        - plugins
+        - cyber_engine_tweaks
+            - mods
                 - modToInstall
 
 Same goes for "archive", "bin", "engine", "mods", "r6", "red4ext" and "tools". 
