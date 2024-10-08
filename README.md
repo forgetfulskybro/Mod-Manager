@@ -55,25 +55,25 @@ In order for this small script to work, Python3 must be installed.
 Mods to be installed must be in a .zip and have the file structure defined i.e.
 
 bin
- | -x64
-    | -CrashReporter
-    | -d3d12on7
-    | -plugins
-| -cyber_engine_tweaks
-| -mods
-   | -modToInstall
+  - x64
+     - CrashReporter
+     - d3d12on7
+     - plugins
+ - cyber_engine_tweaks
+ - mods
+    - modToInstall
 
 **or**
 
 modName
-   | -bin
-      | -x64
-         | -CrashReporter
-         | -d3d12on7
-         | -plugins
-         | -cyber_engine_tweaks
-            | -mods
-               | -modToInstall
+    - bin
+       - x64
+          - CrashReporter
+          - d3d12on7
+          - plugins
+          - cyber_engine_tweaks
+             - mods
+                - modToInstall
 
 Same goes for "archive", "bin", "engine", "mods", "r6", "red4ext" and "tools". 
 If a mod comes in a .7z just right click, extract to folder > Then right click the folder and send to zip.
