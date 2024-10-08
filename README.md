@@ -1,6 +1,6 @@
 # Mod-Manager
 Cyberpunk 2077 terminal based Mod Manager
-- Most files are from [Mod Manager from Nexus Mods](https://www.nexusmods.com/cyberpunk2077/mods/10826)
+- Main files are from [Mod Manager from Nexus Mods](https://www.nexusmods.com/cyberpunk2077/mods/10826)
 - Adds functionality to the process to check for mod updates and reminder to update mods.
 
 ## Files ##
