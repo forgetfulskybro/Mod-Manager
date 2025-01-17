@@ -176,13 +176,9 @@ def uninstallMods():
 
 def write2JsonFile(new_data, filename='mods.json'):
     with open(filename,'r+') as file:
-        # First we load existing data into a dict.
         file_data = json.load(file)
-        # Join new_data with file_data
         file_data[list(new_data.keys())[0]] = new_data.get(list(new_data.keys())[0])
-        # Sets file's current position at offset.
         file.seek(0)
-        # convert back to json.
         json.dump(file_data, file, indent = 4)
 
 def removeAllJsonData(filename):
@@ -194,33 +190,20 @@ def removeAllJsonData(filename):
         with open(filename,'w') as file2:
             json.dump({ }, file2, indent = 4)
 
-# def removeFromJsonFile(bye, filename='mods.json'):
-#     with open(filename,'r') as file:
-#         # First we load existing data into a dict.
-#         file_data = json.load(file)
-#         # pop bye
-#         file_data.pop(bye)
-#         with open(filename,'w') as file2:
-#             # convert back to json.
-#             json.dump(file_data, file2, indent = 4)
-
 def removeFromJsonFile(bye, filename='mods.json'):
     try:
         with open(filename,'r') as file:
-            # First we load existing data into a dict.
             file_data = json.load(file)
-            # Check if the key exists before attempting to pop it
             if bye in file_data:
                 file_data.pop(bye)
                 with open(filename,'w') as file2:
-                    # convert back to json.
                     json.dump(file_data, file2, indent = 4)
             else:
-                print(f"Mod '{bye}' not found in {filename}") #Optional: Inform the user
+                print(f"Mod '{bye}' not found in {filename}") 
     except FileNotFoundError:
-        print(f"File '{filename}' not found.") #Handle case where file doesn't exist.
+        print(f"File '{filename}' not found.") 
     except json.JSONDecodeError:
-        print(f"Error decoding JSON in '{filename}'.  Is it valid JSON?") # Handle JSON decoding errors
+        print(f"Error decoding JSON in '{filename}'.  Is it valid JSON?")
 
 def startJsonFile():
     if not os.path.exists("mods.json"):
