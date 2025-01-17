@@ -21,7 +21,7 @@ def listMods(p = False):
 
     for x, item in enumerate(json_object):
         if item != "game":
-           if (p): print(x, ".", item)
+           if (p): print(f"{x}. {item}")
 
     return json_object
 
@@ -194,15 +194,33 @@ def removeAllJsonData(filename):
         with open(filename,'w') as file2:
             json.dump({ }, file2, indent = 4)
 
+# def removeFromJsonFile(bye, filename='mods.json'):
+#     with open(filename,'r') as file:
+#         # First we load existing data into a dict.
+#         file_data = json.load(file)
+#         # pop bye
+#         file_data.pop(bye)
+#         with open(filename,'w') as file2:
+#             # convert back to json.
+#             json.dump(file_data, file2, indent = 4)
+
 def removeFromJsonFile(bye, filename='mods.json'):
-    with open(filename,'r') as file:
-        # First we load existing data into a dict.
-        file_data = json.load(file)
-        # pop bye
-        file_data.pop(bye)
-        with open(filename,'w') as file2:
-            # convert back to json.
-            json.dump(file_data, file2, indent = 4)
+    try:
+        with open(filename,'r') as file:
+            # First we load existing data into a dict.
+            file_data = json.load(file)
+            # Check if the key exists before attempting to pop it
+            if bye in file_data:
+                file_data.pop(bye)
+                with open(filename,'w') as file2:
+                    # convert back to json.
+                    json.dump(file_data, file2, indent = 4)
+            else:
+                print(f"Mod '{bye}' not found in {filename}") #Optional: Inform the user
+    except FileNotFoundError:
+        print(f"File '{filename}' not found.") #Handle case where file doesn't exist.
+    except json.JSONDecodeError:
+        print(f"Error decoding JSON in '{filename}'.  Is it valid JSON?") # Handle JSON decoding errors
 
 def startJsonFile():
     if not os.path.exists("mods.json"):
@@ -237,7 +255,7 @@ if __name__ == '__main__':
             mods = getReminder()
             for mod in mods:
                 m = mods[str(mod)]
-                print(f"{m["name"]}: {m["version"]}\nNew Version: {m["updated_version"]}\n")
+                print(f"{m["name"]}: {m["version"]}\nNew Version: {m["updated_version"]}\nLink: https://www.nexusmods.com/cyberpunk2077/mods/{str(mod)}\n")
             print("To turn off this reminder, input \"stop\"\n------------------------------------------")
 
         # DISPLAY MENU
