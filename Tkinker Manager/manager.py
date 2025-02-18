@@ -14,21 +14,85 @@ import threading
 LINE_CLEAR = '\x1b[2K'
 root = tk.Tk()
 root.title("Cyberpunk Mod Manager")
-root.geometry("800x600")
+root.geometry("900x600")
 
-root.configure(bg="#282c34")
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+x = (screen_width - 900) // 2
+y = (screen_height - 600) // 2
+root.geometry(f"900x600+{x}+{y}")
+
+COLORS = {
+    'bg_dark': '#1a1b26',
+    'bg_medium': '#24283b',
+    'bg_light': '#414868',
+    'text': '#c0caf5',
+    'accent': '#7aa2f7',
+    'success': '#9ece6a',
+    'error': '#f7768e',
+    'warning': '#e0af68'
+}
+
+root.configure(bg=COLORS['bg_dark'])
 
 style = ttk.Style()
 style.theme_use('clam')
-style.configure("TButton", background="#3e4451", foreground="white", padding=10)
-style.configure("TLabel", background="#282c34", foreground="white")
-style.configure("TCheckbutton", background="#282c34", foreground="white")
-style.map("TButton", background=[("active", "#2e3440")])
 
-log_frame = Frame(root, bg="#282c34")
-log_frame.pack(side="bottom", fill="both", expand=True)
+style.configure(
+    "TButton",
+    background=COLORS['bg_light'],
+    foreground=COLORS['text'],
+    padding=(20, 10),
+    font=('Segoe UI', 10),
+    borderwidth=0
+)
+style.map(
+    "TButton",
+    background=[("active", COLORS['accent'])],
+    foreground=[("active", COLORS['bg_dark'])]
+)
 
-log_text = Text(log_frame, height=20, width=80, wrap="char", bg="#3e4451", fg="white", insertbackground="white", undo=True)
+style.configure(
+    "TLabel",
+    background=COLORS['bg_dark'],
+    foreground=COLORS['text'],
+    font=('Segoe UI', 10)
+)
+
+style.configure(
+    "TCheckbutton",
+    background=COLORS['bg_dark'],
+    foreground=COLORS['text'],
+    font=('Segoe UI', 10)
+)
+
+main_container = Frame(root, bg=COLORS['bg_dark'])
+main_container.pack(fill="both", expand=True, padx=20, pady=20)
+
+log_frame_container = Frame(main_container, bg=COLORS['bg_dark'])
+log_frame_container.pack(side="bottom", fill="both", expand=True)
+
+log_title = ttk.Label(log_frame_container, text="Activity Log", style="TLabel", font=('Segoe UI', 12, 'bold'))
+log_title.pack(pady=(0, 10), anchor="w")
+
+log_frame = Frame(log_frame_container, bg=COLORS['bg_medium'], bd=1, relief="solid")
+log_frame.pack(fill="both", expand=True)
+
+log_text = Text(
+    log_frame,
+    height=20,
+    width=80,
+    wrap="char",
+    bg=COLORS['bg_medium'],
+    fg=COLORS['text'],
+    insertbackground=COLORS['text'],
+    selectbackground=COLORS['accent'],
+    selectforeground=COLORS['bg_dark'],
+    font=('Consolas', 10),
+    padx=10,
+    pady=10,
+    undo=True
+)
 log_text.pack(side="left", fill="both", expand=True)
 
 scrollbar = Scrollbar(log_frame, command=log_text.yview)
@@ -38,10 +102,11 @@ log_text.config(yscrollcommand=scrollbar.set)
 def callback(url):
     webbrowser.open_new(url)
 
-def log(message: str, fatal: bool = False, ok: bool = False, remind: bool = False, remindColor: str = "#D8BE42", url: str = None) -> None:
+def log(message: str, fatal: bool = False, ok: bool = False, delete: bool = False, remind: bool = False, remindColor: str = "#D8BE42", url: str = None) -> None:
     if fatal:
         log_text.insert("end", "FATAL ", "fatal")
-
+    elif delete:
+        log_text.insert("end", "DELETED ", "deleted")
     elif ok:
         log_text.insert("end", "OK ", "ok")
     elif remind:
@@ -63,6 +128,7 @@ def log(message: str, fatal: bool = False, ok: bool = False, remind: bool = Fals
     log_text.tag_config("fatal", foreground="red")
     log_text.tag_config("info", foreground="#ffa500")
     log_text.tag_config("ok", foreground="#00ff00")
+    log_text.tag_config("deleted", foreground="#ff0000")
     log_text.see("end")
 
 
@@ -241,14 +307,45 @@ def installMods(modsDirs):
 
     progress_window = tk.Toplevel(root)
     progress_window.title("Installing Mods")
-    progress_window.geometry("300x150")
-    progress_window.configure(bg="#282c34")
+    progress_window.configure(bg=COLORS['bg_dark'])
 
-    progress_label = ttk.Label(progress_window, text="Installing mods...", style="TLabel")
-    progress_label.pack(pady=10)
+    window_width = 400
+    window_height = 200
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = (screen_width - window_width) // 2
+    y = (screen_height - window_height) // 2
+    progress_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-    progress_bar = ttk.Progressbar(progress_window, length=200, mode='determinate')
-    progress_bar.pack(pady=10)
+    container = Frame(progress_window, bg=COLORS['bg_dark'])
+    container.pack(fill="both", expand=True, padx=50, pady=30)
+    container.grid_columnconfigure(0, weight=1)
+    container.grid_rowconfigure(1, weight=1)
+
+    progress_label = ttk.Label(
+        container,
+        text="Installing mods...",
+        style="TLabel",
+        font=('Segoe UI', 11)
+    )
+    progress_label.pack(pady=(0, 15), anchor="center")
+
+    style.configure(
+        "Installation.Horizontal.TProgressbar",
+        troughcolor=COLORS['bg_medium'],
+        background=COLORS['accent'],
+        darkcolor=COLORS['accent'],
+        lightcolor=COLORS['accent'],
+        bordercolor=COLORS['bg_medium']
+    )
+
+    progress_bar = ttk.Progressbar(
+        container,
+        length=300,
+        mode='determinate',
+        style="Installation.Horizontal.TProgressbar"
+    )
+    progress_bar.pack(pady=(0, 15), anchor="center")
 
     def update_progress(current, total, message):
         progress_bar['value'] = (current / total) * 100
@@ -336,14 +433,42 @@ def uninstallMods():
 
     uninstall_window = tk.Toplevel(root)
     uninstall_window.title("Uninstall Mods")
-    uninstall_window.configure(bg="#282c34")
+    uninstall_window.configure(bg=COLORS['bg_dark'])
 
-    mod_frame = Frame(uninstall_window, bg="#282c34", padx=10, pady=10)
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = (screen_width - 500) // 2
+    y = (screen_height - 400) // 2
+    uninstall_window.geometry(f"500x500+{x}+{y}")
+
+    container = Frame(uninstall_window, bg=COLORS['bg_dark'])
+    container.pack(fill="both", expand=True, padx=20, pady=20)
+
+    title_label = ttk.Label(
+        container,
+        text="Select Mods to Uninstall",
+        style="TLabel",
+        font=('Segoe UI', 12, 'bold')
+    )
+    title_label.pack(pady=(0, 15))
+
+    mod_frame = Frame(container, bg=COLORS['bg_medium'], bd=1, relief="solid")
     mod_frame.pack(fill="both", expand=True)
-    mod_listbox = tk.Listbox(mod_frame, selectmode="multiple", bg="#3e4451", fg="white", width=40, height=15)
+
+    mod_listbox = tk.Listbox(
+        mod_frame,
+        selectmode="multiple",
+        bg=COLORS['bg_medium'],
+        fg=COLORS['text'],
+        selectbackground=COLORS['accent'],
+        selectforeground=COLORS['bg_dark'],
+        font=('Segoe UI', 10),
+        width=40,
+        height=15
+    )
     for i, mod_name in enumerate(lstMods):
         mod_listbox.insert(i, mod_name)
-    mod_listbox.pack(side="left", fill="y")
+    mod_listbox.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 
 
     scrollbar = Scrollbar(mod_frame, orient="vertical", command=mod_listbox.yview)
@@ -363,7 +488,7 @@ def uninstallMods():
                 file_path = json.load(open('mods.json', 'r')).get("game") + (file if file.startswith("/") else "/" + file)
                 try:
                     os.remove(file_path)
-                    log(f"Removed: {file_path}", ok=True)
+                    log(f"{file_path}", delete=True)
                 except FileNotFoundError:
                     log(f"File not found: {file_path}", fatal=True)
                 except OSError as e:
