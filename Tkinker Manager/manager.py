@@ -1,0 +1,486 @@
+import os
+import re
+import json
+import time
+import random
+import zipfile
+import requests, webbrowser
+import tkinter as tk
+from tkinter import filedialog, Text, Scrollbar, Frame, ttk, simpledialog
+import asyncio
+import aiohttp
+import threading
+
+LINE_CLEAR = '\x1b[2K'
+root = tk.Tk()
+root.title("Cyberpunk Mod Manager")
+root.geometry("800x600")
+
+root.configure(bg="#282c34")
+
+style = ttk.Style()
+style.theme_use('clam')
+style.configure("TButton", background="#3e4451", foreground="white", padding=10)
+style.configure("TLabel", background="#282c34", foreground="white")
+style.configure("TCheckbutton", background="#282c34", foreground="white")
+style.map("TButton", background=[("active", "#2e3440")])
+
+log_frame = Frame(root, bg="#282c34")
+log_frame.pack(side="bottom", fill="both", expand=True)
+
+log_text = Text(log_frame, height=20, width=80, wrap="char", bg="#3e4451", fg="white", insertbackground="white", undo=True)
+log_text.pack(side="left", fill="both", expand=True)
+
+scrollbar = Scrollbar(log_frame, command=log_text.yview)
+scrollbar.pack(side="right", fill="y")
+log_text.config(yscrollcommand=scrollbar.set)
+
+def callback(url):
+    webbrowser.open_new(url)
+
+def log(message: str, fatal: bool = False, ok: bool = False, remind: bool = False, remindColor: str = "#D8BE42", url: str = None) -> None:
+    if fatal:
+        log_text.insert("end", "FATAL ", "fatal")
+
+    elif ok:
+        log_text.insert("end", "OK ", "ok")
+    elif remind:
+        #if (url):
+            #log_text.insert("end", "BUTTON ", "button")
+        ran = f"remind-{ random.randint(1, 1000) }"
+        if url:
+            lbl = tk.Label(log_text, cursor="hand2", text="Open", fg="#00F484", bg="#3E4451")
+            log_text.window_create('end', window=lbl, pady=3)
+            lbl.bind("<Button-1>", lambda event, u=url: callback(u))
+            log_text.tag_bind(ran, "<Button-1>", lambda event, u=url: callback(u))
+        log_text.insert("end", f" {message}\n", ran)
+        #log_text.tag_config("button", foreground="#00F484")
+        log_text.tag_config(ran, foreground=remindColor)
+        return
+    else:
+        log_text.insert("end", "INFO ", "info")
+    log_text.insert("end", f"{message}\n")
+    log_text.tag_config("fatal", foreground="red")
+    log_text.tag_config("info", foreground="#ffa500")
+    log_text.tag_config("ok", foreground="#00ff00")
+    log_text.see("end")
+
+
+def ENV():
+    try:
+        with open('env.json', 'r') as f:
+            env = json.load(f)
+            return env['NEXUS_API_KEY']
+    except (FileNotFoundError, KeyError, json.JSONDecodeError):
+        return None
+
+def get_api_key():
+    api_key = None
+    while api_key is None or not validate_api_key(api_key):
+        api_key = simpledialog.askstring("Nexus Mods API Key", "Enter your Nexus Mods Personal API key (can be found at https://next.nexusmods.com/settings/api-keys):", parent=root)
+        if api_key is None:
+            log("API key entry cancelled. Exiting.", fatal=True)
+            root.quit()
+            return None
+        if not validate_api_key(api_key):
+            log("Invalid API key. Please try again.", fatal=False)
+    return api_key
+
+def validate_api_key(api_key):
+    if not api_key:
+        return False
+    if len(api_key) < 80 or not re.search(r"[+/=]", api_key):
+      return False
+    return True
+
+def listMods(p = False):
+    with open('mods.json', 'r') as openfile:
+        json_object = json.load(openfile)
+
+    for x, item in enumerate(json_object):
+        if item != "game" and item != "mods":
+           if (p): log(f"{x-1}. {item}")
+
+    return json_object
+
+def listVersions():
+    with open('updates.json', 'r') as openfile:
+        json_object = json.load(openfile)
+
+    return json_object
+
+async def fetch_mod_data(mod_id, api_key):
+    url = f'https://api.nexusmods.com/v1/games/cyberpunk2077/mods/{mod_id}.json'
+    headers = {"Content-Type": "application/json", "apikey": api_key}
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as response:
+            response.raise_for_status() 
+            return await response.json()
+
+def write2JsonFile(new_data, filename='mods.json'):
+    try:
+        with open(filename, 'r') as f:
+            file_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        file_data = {}
+
+    file_data.update(new_data)
+
+    with open(filename, 'w') as f:
+        json.dump(file_data, f, indent=4)
+
+def removeAllJsonData(filename):
+    try:
+        with open(filename, 'r') as file:
+            file_data = json.load(file)
+            file_data = {}  
+            with open(filename, 'w') as file2:
+                json.dump(file_data, file2, indent=4)
+    except FileNotFoundError:
+        log(f"File '{filename}' not found.", fatal=True)
+    except json.JSONDecodeError:
+        log(f"Error decoding JSON in '{filename}'.", fatal=True)
+            
+def updater():
+    jsonMods = listMods()
+    mods = [""]
+    lstMods = [""]
+
+    for item in jsonMods:
+        if item != "game" and item != "mods":
+            lstMods.append(item)
+
+    for mod in jsonMods:
+        pattern = re.compile(r"\((\d+)\)")
+        m = pattern.findall(str(mod))
+        m = "".join(m)
+        mods.append(m)
+
+    mods = [x for x in mods if x]
+    api_key = ENV()
+     
+    def run_async_task():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(getUpdates(mods, api_key))
+        loop.close()
+
+    threading.Thread(target=run_async_task).start()
+
+
+async def getUpdates(data, api_key):
+    needUpdate = []
+    version = listVersions()
+    for mod_id in data:
+        try:
+            r = await fetch_mod_data(mod_id, api_key)
+            log(f"{r['name']}[{str(r['mod_id'])}]: v{str(r['version'])}")
+
+            ch = version.get(str(r["mod_id"]))
+            if ch and ch["id"] != r["version"]:
+                needUpdate.append({"version": ch["id"], "updated_version": r["version"], "name": r["name"], "mod_id": r["mod_id"]})
+                log("Update? ✅")
+            else:
+                log("Update? ❌")
+            await asyncio.sleep(3.5)
+        except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError, IndexError) as e:
+             log(f"Error processing mod {mod_id}: {e}", fatal=True)
+        except Exception as e:
+            log(f"An unexpected error occurred: {e}", fatal=True)
+
+
+    updates_count = len(needUpdate)
+    if updates_count > 0:
+        removeAllJsonData("reminder.json")
+        for update in needUpdate:
+            write2JsonFile({update["mod_id"]: {"name": update["name"], "version": update["version"], "updated_version": update["updated_version"]}}, "reminder.json")
+
+    log(f"Mods needing updated: {updates_count}", ok=True)
+    updates = getReminder()
+    if updates:
+        updateDisplay(updates)
+    return needUpdate
+
+
+def updateName(name):
+    pattern = re.compile(r"\-(\d+)\-")
+    m = pattern.findall(str(name))
+    m = next(iter(m or []), "None")
+    
+    if m == "None":
+        pattern = re.compile(r"\((\d+)\)")
+        m = pattern.findall(str(name))
+        m = next(iter(m or []), "None")
+
+    if m == "None":
+        return log(f"Unknown mod number for '{name}'", fatal=True)
+    
+    r = requests.get(f'https://api.nexusmods.com/v1/games/cyberpunk2077/mods/{m}.json', headers={ "Content-Type": "application/json", "apikey": ENV() })
+    r = r.json()
+    m = name.replace(f"-{m}", f"-({m})")
+
+    newEntry = {str(r["mod_id"]): {
+        "id": str(r["version"])
+    }}
+
+    write2JsonFile(newEntry, "updates.json")
+    return m
+
+def getReminder():
+    try:
+        with open('reminder.json', 'r') as openfile:
+            json_object = json.load(openfile)
+        return json_object
+    except FileNotFoundError:
+        return {}
+    
+def installMods(modsDirs):
+    modNames = filedialog.askopenfilenames(title="Select mods to install.", filetypes=[('zip files', '*.zip')], initialdir=json.load(open('mods.json', 'r')).get("mods"))
+    if not modNames:
+        return
+
+    progress_window = tk.Toplevel(root)
+    progress_window.title("Installing Mods")
+    progress_window.geometry("300x150")
+    progress_window.configure(bg="#282c34")
+
+    progress_label = ttk.Label(progress_window, text="Installing mods...", style="TLabel")
+    progress_label.pack(pady=10)
+
+    progress_bar = ttk.Progressbar(progress_window, length=200, mode='determinate')
+    progress_bar.pack(pady=10)
+
+    def update_progress(current, total, message):
+        progress_bar['value'] = (current / total) * 100
+        progress_label.config(text=message)
+        progress_window.update()
+
+    async def install_mod(fileName, current, total):
+        try:
+            name = updateName(os.path.basename(fileName).replace(".zip",""))
+            update_progress(current, total, f"Installing {name}...")
+
+            if json.load(open('mods.json', 'r')).get(name) is not None:
+                log(f"{name} is already installed.", fatal=True)
+                return
+
+            newEntry = {name: []}
+            with zipfile.ZipFile(fileName, 'r') as zip_ref:
+                fileList = zip_ref.namelist()
+                if not fileList:
+                    log(f"Empty zip file: {fileName}", fatal=True)
+                    return
+
+                firstFileWithDot = next((f for f in fileList if '.' in f), None)
+                if firstFileWithDot is None:
+                    log(f"No files found in zip: {fileName}", fatal=True)
+                    return
+
+                topLevelDir = firstFileWithDot.split('/')[0]
+                if topLevelDir not in modsDirs and len(firstFileWithDot.split('/')) > 1 and firstFileWithDot.split('/')[1] in modsDirs:
+                    for item in zip_ref.infolist():
+                        if item.is_dir():
+                            continue
+                        item.filename = item.filename.replace(topLevelDir, "")
+                        zip_ref.extract(item, json.load(open('mods.json', 'r')).get("game"))
+                elif topLevelDir in modsDirs:
+                    zip_ref.extractall(path=json.load(open('mods.json', 'r')).get("game"))
+                else:
+                    log(f"Bad zip hierarchy or unsupported directory structure: {fileName}", fatal=True)
+                    return
+
+                for item in zip_ref.infolist():
+                    if item.is_dir():
+                        continue
+                    newEntry[name].append(item.filename)
+
+            write2JsonFile(newEntry)
+            log(f"{name} installed.", ok=True)
+
+        except FileNotFoundError:
+            log(f"File '{fileName}' not found.", fatal=True)
+        except zipfile.BadZipFile:
+            log(f"'{fileName}' is not a valid zip file.", fatal=True)
+        except Exception as e:
+            log(f"An unexpected error occurred during installation: {e}", fatal=True)
+
+    async def process_mods():
+        total_mods = len(modNames)
+        tasks = []
+        for i, fileName in enumerate(modNames, 1):
+            task = asyncio.create_task(install_mod(fileName, i, total_mods))
+            tasks.append(task)
+            await asyncio.sleep(0.2) 
+        await asyncio.gather(*tasks)
+        progress_window.destroy()
+
+    def run_async_installation():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(process_mods())
+        loop.close()
+
+    threading.Thread(target=run_async_installation).start()
+
+def uninstallMods():
+    jsonMods = listMods()
+    if not jsonMods:
+        log("No mods installed.", fatal=False)
+        return
+
+    lstMods = [item for item in jsonMods if item != "game" and item != "mods"]
+
+    if not lstMods:
+        log("No mods installed.", fatal=False)
+        return
+
+    uninstall_window = tk.Toplevel(root)
+    uninstall_window.title("Uninstall Mods")
+    uninstall_window.configure(bg="#282c34")
+
+    mod_frame = Frame(uninstall_window, bg="#282c34", padx=10, pady=10)
+    mod_frame.pack(fill="both", expand=True)
+    mod_listbox = tk.Listbox(mod_frame, selectmode="multiple", bg="#3e4451", fg="white", width=40, height=15)
+    for i, mod_name in enumerate(lstMods):
+        mod_listbox.insert(i, mod_name)
+    mod_listbox.pack(side="left", fill="y")
+
+
+    scrollbar = Scrollbar(mod_frame, orient="vertical", command=mod_listbox.yview)
+    scrollbar.pack(side="right", fill="y")
+    mod_listbox.config(yscrollcommand=scrollbar.set)
+
+
+    def do_uninstall():
+        selected_indices = mod_listbox.curselection()
+        if not selected_indices:
+            log("No mods selected for uninstallation.", fatal=False)
+            return
+
+        for index in selected_indices:
+            mod_to_remove = lstMods[index]
+            for file in jsonMods.get(mod_to_remove, []):
+                file_path = json.load(open('mods.json', 'r')).get("game") + (file if file.startswith("/") else "/" + file)
+                try:
+                    os.remove(file_path)
+                    log(f"Removed: {file_path}", ok=True)
+                except FileNotFoundError:
+                    log(f"File not found: {file_path}", fatal=True)
+                except OSError as e:
+                    log(f"Error removing file {file_path}: {e}", fatal=True)
+
+            pattern = re.compile(r"\((\d+)\)")
+            mod_id = "".join(pattern.findall(str(mod_to_remove)))
+            removeFromJsonFile(mod_id, "updates.json")
+            removeFromJsonFile(mod_to_remove)
+            log(f"{mod_to_remove} uninstalled successfully.", ok=True)
+        uninstall_window.destroy()
+
+    uninstall_button = ttk.Button(uninstall_window, text="Uninstall Selected", command=do_uninstall, style="TButton", width=20)
+    uninstall_button.pack(pady=10)
+
+
+    uninstall_window.transient(root)
+    uninstall_window.focus_force()
+
+
+def removeFromJsonFile(bye, filename='mods.json'):
+    try:
+        with open(filename,'r') as file:
+            file_data = json.load(file)
+            if bye in file_data:
+                file_data.pop(bye)
+                with open(filename,'w') as file2:
+                    json.dump(file_data, file2, indent = 4)
+            else:
+                log(f"Mod '{bye}' not found in {filename}")
+    except FileNotFoundError:
+        log(f"File '{filename}' not found.", fatal=True)
+    except json.JSONDecodeError:
+        log(f"Error decoding JSON in '{filename}'.  Is it valid JSON?", fatal=True)
+
+def stopReminders():
+    removeAllJsonData("reminder.json")
+    log("Deleted all reminders.", ok=True)
+    global button5 
+    if button5:
+        button5.destroy()
+        button5 = None
+
+def startJsonFile():
+    if not os.path.exists("mods.json"):
+        log("Select game installation folder.")
+        game_path = filedialog.askdirectory(title="Select game installation folder.")
+        if not game_path:
+            log("Game directory not selected. Exiting.", fatal=True)
+            root.quit()
+            return
+        
+        log("Select a folder where you store your Cyberpunk mods.")
+        mods_path = filedialog.askdirectory(title="Select a folder where you store your Cyberpunk mods.")
+
+        api_key = get_api_key()
+        if api_key is None:
+            return
+
+        if mods_path is not None:
+            toWrite = f'{{"game":"{game_path}", "mods":"{mods_path}"}}'
+        else:
+            toWrite = '{"game":"' + game_path + '"}'
+
+        with open("mods.json", "w") as outfile:
+            outfile.write(toWrite)
+            log("Created mods.json to store all mod data.", ok=True)
+
+        with open("updates.json", "w") as outfile:
+            outfile.write("{}")
+            log("Created updates.json to store all update data.", ok=True)
+
+        with open("reminder.json", "w") as outfile:
+            outfile.write("{}")
+            log("Created reminder.json to store all reminder data.", ok=True)
+
+        with open("env.json", "w") as outfile:
+            toWrite = f'{{"NEXUS_API_KEY":"{api_key}"}}'
+            outfile.write(toWrite)
+            log("Created env.json to store your Nexus Mods API key.", ok=True)
+    elif json.load(open('mods.json', 'r')).get("game") is None:
+        log("Game directory not found inside mods.json", fatal=True)
+        root.quit()
+        return
+
+button_frame = Frame(root, bg="#282c34")
+button_frame.pack(pady=10)
+
+button1 = ttk.Button(button_frame, text="List Installed Mods", command=lambda: listMods(True), width=20, style="TButton")
+button1.grid(row=0, column=0, padx=10, pady=5)
+
+button2 = ttk.Button(button_frame, text="Install Mod(s)", command=lambda: installMods(modsDirs), width=20, style="TButton")
+button2.grid(row=0, column=1, padx=10, pady=5)
+
+button3 = ttk.Button(button_frame, text="Uninstall Mod(s)", command=uninstallMods, width=20, style="TButton")
+button3.grid(row=1, column=0, padx=10, pady=5)
+
+button4 = ttk.Button(button_frame, text="Update Checker", command=updater, width=20, style="TButton")
+button4.grid(row=1, column=1, padx=10, pady=5)
+
+button5 = None
+if len(getReminder()) > 0:
+    button5 = ttk.Button(button_frame, text="Stop Reminders", command=stopReminders, width=20, style="TButton")
+    button5.grid(row=1, column=3, padx=10, pady=5)
+
+def updateDisplay(updates):
+    log("‼️ MOD UPDATES AVAILABLE ‼️", remind=True, remindColor="red")
+    for mod_id, data in updates.items():
+        log(f"{data['name']} ({mod_id}): Version {data['version']} -> {data['updated_version']}", remind=True, url=f"https://nexusmods.com/cyberpunk2077/mods/{mod_id}")
+
+def display_updates_on_start():
+    updates = getReminder()
+    if updates:
+        updateDisplay(updates)
+
+if __name__ == '__main__':
+    startJsonFile()
+    modsDirs = ["archive", "bin", "engine", "mods", "r6", "red4ext", "tools"]
+    display_updates_on_start()
+    root.mainloop()

@@ -1,14 +1,18 @@
 # Mod-Manager
-Cyberpunk 2077 terminal based Mod Manager
+Cyberpunk 2077 tkinker based Mod Manager
 - Main files are from [Mod Manager from Nexus Mods](https://www.nexusmods.com/cyberpunk2077/mods/10826)
 - Adds functionality to the process to check for mod updates and reminder to update mods.
+- This new version uses Tkinker which is a UI toolkit for Python. Instead of a terminal it has an interface.
 
 ## Files ##
 **[manager.py]**
 This is the script that controls the entire process by letting you install, uninstall, check mods, and update mods.
 
 **[start.bat]**
-Double click to launch `manager.py`
+This file makes `manager.py` run by using a Python script.
+
+**[manager.vbs]**
+This file starts `start.bat` without opening Command Prompt. It's not needed necessarily but if you get annoyed of Command Prompt every time you use `start.bat` then I recommend using this file.
 
 **[mods.json]**
 This file will be created when the script is launched. Keep this file with `manager.py`
@@ -30,18 +34,27 @@ Drag and drop the script wherever you want, I recommend keeping this script on t
 When launching the script for the first time, a window will prompt asking you to select the game installation path. i.e. C:/SteamLibrary/steamapps/common/Cyberpunk 2077
 
 **[3rd step]**
+After selecting your game installation, another window will prompt asking you to select the Cyberpunk Mods folder where you store all your mods.
+
+**[4rd step]**
 After selecting your game installation, you will be prompted to input your Nexus Mods API key. To get your api key, go to https://next.nexusmods.com/settings/api-keys and copy your personal API key.
 
-**[4th step]**
+**[5th step]**
 When installing mods, multiple zips can be selected. When uninstalling mods, multiple mods can be uninstalled.
 
-**[5th step]**
+**[6th step]**
 Updater can only be used when mods are currently added to Cyberpunk 2077. Make sure to run this file before removing any mods to make sure they are up to date.
 
 
 ## Dependencies ##
 **[Requests]**
 This is a python library that allows the script to check for mod updates. This library is not included in the script, so it must be installed manually. To install it, run the following command in your terminal: `pip install requests`
+
+**[Tkinker]**
+This is a python library that allows the script to run. This library is not included in the script, so it must be installed manually. To install it, run the following command in your terminal: `pip install tkinker`
+
+**[Aiohttp]**
+This is a python library that allows the script to check for mod updates. This library is not included in the script, so it must be installed manually. To install it, run the following command in your terminal: `pip install aiohttp`
 
 **[Python3+]**
 In order for this small script to work, Python3 must be installed. Go to this website: http://www.python.org/download/ and download the latest version of Python 3 for your operating system.
