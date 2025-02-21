@@ -8,11 +8,8 @@ Cyberpunk 2077 Tkinker based Mod Manager
 **[manager.py]**
 This is the script that controls the entire process by letting you install, uninstall, check mods, and update mods.
 
-**[start.bat]**
-This file makes `manager.py` run by using a Python script.
-
-**[manager.vbs]**
-This file starts `start.bat` without opening Command Prompt. It's not needed necessarily but if you get annoyed of Command Prompt every time you use `start.bat` then I recommend using this file.
+**[start.pyw]**
+This file makes `manager.py` run by using a Python script without opening Command Prompt.
 
 **[mods.json]**
 This file will be created when the script is launched. Keep this file with `manager.py`

@@ -140,19 +140,19 @@ def ENV():
     except (FileNotFoundError, KeyError, json.JSONDecodeError):
         return None
 
-def get_api_key():
+def getApiKey():
     api_key = None
-    while api_key is None or not validate_api_key(api_key):
+    while api_key is None or not validateApiKey(api_key):
         api_key = simpledialog.askstring("Nexus Mods API Key", "Enter your Nexus Mods Personal API key (can be found at https://next.nexusmods.com/settings/api-keys):", parent=root)
         if api_key is None:
             log("API key entry cancelled. Exiting.", fatal=True)
             root.quit()
             return None
-        if not validate_api_key(api_key):
+        if not validateApiKey(api_key):
             log("Invalid API key. Please try again.", fatal=False)
     return api_key
 
-def validate_api_key(api_key):
+def validateApiKey(api_key):
     if not api_key:
         return False
     if len(api_key) < 80 or not re.search(r"[+/=]", api_key):
@@ -175,7 +175,7 @@ def listVersions():
 
     return json_object
 
-async def fetch_mod_data(mod_id, api_key):
+async def fetchModData(mod_id, api_key):
     url = f'https://api.nexusmods.com/v1/games/cyberpunk2077/mods/{mod_id}.json'
     headers = {"Content-Type": "application/json", "apikey": api_key}
     async with aiohttp.ClientSession() as session:
@@ -225,13 +225,13 @@ def updater():
     mods = [x for x in mods if x]
     api_key = ENV()
      
-    def run_async_task():
+    def runAsyncTask():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(getUpdates(mods, api_key))
         loop.close()
 
-    threading.Thread(target=run_async_task).start()
+    threading.Thread(target=runAsyncTask).start()
 
 
 async def getUpdates(data, api_key):
@@ -239,7 +239,7 @@ async def getUpdates(data, api_key):
     version = listVersions()
     for mod_id in data:
         try:
-            r = await fetch_mod_data(mod_id, api_key)
+            r = await fetchModData(mod_id, api_key)
             log(f"{r['name']}[{str(r['mod_id'])}]: v{str(r['version'])}")
 
             ch = version.get(str(r["mod_id"]))
@@ -347,7 +347,7 @@ def installMods(modsDirs):
     )
     progress_bar.pack(pady=(0, 15), anchor="center")
 
-    def update_progress(current, total, message):
+    def updateProgress(current, total, message):
         progress_bar['value'] = (current / total) * 100
         progress_label.config(text=message)
         progress_window.update()
@@ -355,7 +355,7 @@ def installMods(modsDirs):
     async def install_mod(fileName, current, total):
         try:
             name = updateName(os.path.basename(fileName).replace(".zip",""))
-            update_progress(current, total, f"Installing {name}...")
+            updateProgress(current, total, f"Installing {name}...")
 
             if json.load(open('mods.json', 'r')).get(name) is not None:
                 log(f"{name} is already installed.", fatal=True)
@@ -476,7 +476,7 @@ def uninstallMods():
     mod_listbox.config(yscrollcommand=scrollbar.set)
 
 
-    def do_uninstall():
+    def doUninstall():
         selected_indices = mod_listbox.curselection()
         if not selected_indices:
             log("No mods selected for uninstallation.", fatal=False)
@@ -501,7 +501,7 @@ def uninstallMods():
             log(f"{mod_to_remove} uninstalled successfully.", ok=True)
         uninstall_window.destroy()
 
-    uninstall_button = ttk.Button(uninstall_window, text="Uninstall Selected", command=do_uninstall, style="TButton", width=20)
+    uninstall_button = ttk.Button(uninstall_window, text="Uninstall Selected", command=doUninstall, style="TButton", width=20)
     uninstall_button.pack(pady=10)
 
 
@@ -544,7 +544,7 @@ def startJsonFile():
         log("Select a folder where you store your Cyberpunk mods.")
         mods_path = filedialog.askdirectory(title="Select a folder where you store your Cyberpunk mods.")
 
-        api_key = get_api_key()
+        api_key = getApiKey()
         if api_key is None:
             return
 
@@ -599,7 +599,7 @@ def updateDisplay(updates):
     for mod_id, data in updates.items():
         log(f"{data['name']} ({mod_id}): Version {data['version']} -> {data['updated_version']}", remind=True, url=f"https://nexusmods.com/cyberpunk2077/mods/{mod_id}")
 
-def display_updates_on_start():
+def displayUpdatesOnStart():
     updates = getReminder()
     if updates:
         updateDisplay(updates)
@@ -607,5 +607,5 @@ def display_updates_on_start():
 if __name__ == '__main__':
     startJsonFile()
     modsDirs = ["archive", "bin", "engine", "mods", "r6", "red4ext", "tools"]
-    display_updates_on_start()
+    displayUpdatesOnStart()
     root.mainloop()
