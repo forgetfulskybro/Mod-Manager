@@ -134,14 +134,6 @@ if __name__ == '__main__':
     running = True
 
     while running:
-        if len(getReminder()) > 0:
-            print(f"Reminder to update your mods! Mods needing updated:\n")
-            mods = getReminder()
-            for mod in mods:
-                m = mods[str(mod)]
-                print(f"{m["name"]}: {m["version"]}\nNew Version: {m["updated_version"]}\nLink: https://www.nexusmods.com/cyberpunk2077/mods/{str(mod)}\n")
-            print("To turn off this reminder, input \"stop\"\n------------------------------------------")
-
         # DISPLAY MENU
         print("Installing mods under: "+ json.load(open('mods.json', 'r')).get("game"))
         print("1. List installed mods in installation order")
