@@ -2,8 +2,7 @@
 Cyberpunk 2077 Tkinker based Mod Manager
 - Main files are from [Mod Manager from Nexus Mods](https://www.nexusmods.com/cyberpunk2077/mods/10826)
 - ~~Adds functionality to the process to check for mod updates and reminder to update mods.~~
-- *Removed reminders due to DegMods not having a reliable way of getting mod information*
-
+- *Removed reminders due to DegMods not having a reliable way of getting mod information* | If you wish to have reminders enabled, use the NexusMods version: [Tkinker Manager](https://github.com/forgetfulskybro/Mod-Manager/tree/main/Tkinker%20Manager) - [Terminal Manager](https://github.com/forgetfulskybro/Mod-Manager)
 - This new version uses Tkinker which is a UI toolkit for Python. Instead of a terminal it has an interface.
 
 ## Files ##
