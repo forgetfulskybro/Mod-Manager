@@ -15,15 +15,6 @@ This file makes `manager.py` run by using a Python script without opening Comman
 **[mods.json]**
 This file will be created when the script is launched. Keep this file with `manager.py`
 
-**[reminder.json]**
-This file holds all the data for when mods need to be updated. Keep this file with `manager.py`
-
-**[updates.json]**
-The file that holds all mods' IDs and versions to check for updates when the command is ran. Keep this file with `manager.py`
-
-**[env.json]**
-This file holds your Nexus Mods API key. Keep this file with `manager.py`.
-
 ## Instructions ##
 **[1st step]**
 Drag and drop the script wherever you want, I recommend keeping this script on the game folder or its own folder under the game path.
