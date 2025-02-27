@@ -8,7 +8,7 @@ Can be found in the [Tkinker Manager folder](https://github.com/forgetfulskybro/
 Cyberpunk 2077 terminal based Mod Manager
 - Main files are from [Mod Manager from Nexus Mods](https://www.nexusmods.com/cyberpunk2077/mods/10826)
 ~~- Adds functionality to the process to check for mod updates and reminder to update mods.~~ 
-*Removed due to DegMods not having a reliable way of getting mod information*
+- *Removed due to DegMods not having a reliable way of getting mod information*
 
 ## Files ##
 **[manager.py]**
