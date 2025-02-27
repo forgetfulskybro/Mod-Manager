@@ -1,7 +1,9 @@
 # Mod-Manager
 Cyberpunk 2077 Tkinker based Mod Manager
 - Main files are from [Mod Manager from Nexus Mods](https://www.nexusmods.com/cyberpunk2077/mods/10826)
-- Adds functionality to the process to check for mod updates and reminder to update mods.
+~~- Adds functionality to the process to check for mod updates and reminder to update mods.~~
+*Removed due to DegMods not having a reliable way of getting mod information*
+
 - This new version uses Tkinker which is a UI toolkit for Python. Instead of a terminal it has an interface.
 
 ## Files ##
@@ -33,14 +35,8 @@ When launching the script for the first time, a window will prompt asking you to
 **[3rd step]**
 After selecting your game installation, another window will prompt asking you to select the Cyberpunk Mods folder where you store all your mods.
 
-**[4rd step]**
-After selecting your game installation, you will be prompted to input your Nexus Mods API key. To get your api key, go to https://next.nexusmods.com/settings/api-keys and copy your personal API key.
-
-**[5th step]**
+**[4th step]**
 When installing mods, multiple zips can be selected. When uninstalling mods, multiple mods can be uninstalled.
-
-**[6th step]**
-Updater can only be used when mods are currently added to Cyberpunk 2077. Make sure to run this file before removing any mods to make sure they are up to date.
 
 
 ## Dependencies ##

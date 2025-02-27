@@ -11,10 +11,6 @@ LINE_CLEAR = '\x1b[2K'
 root = tk.Tk()
 root.withdraw()
 
-def ENV():
-    env = json.load(open('env.json', 'r'))
-    return env['NEXUS_API_KEY']
-
 def listMods(p = False):
     with open('mods.json', 'r') as openfile:
         json_object = json.load(openfile)
@@ -25,93 +21,11 @@ def listMods(p = False):
 
     return json_object
 
-def listVersions():
-    with open('updates.json', 'r') as openfile:
-        json_object = json.load(openfile)
-
-    return json_object
-
-def updater():
-    jsonMods = listMods()
-    mods = [""]
-    lstMods = [""]
-
-    for item in jsonMods:
-        if item != "game":
-            lstMods.append(item)
-
-    for mod in jsonMods: 
-        pattern = re.compile(r"\((\d+)\)")
-        m = pattern.findall(str(mod))
-        m = "".join(m)
-        mods.append(m)
-
-    mods = [x for x in mods if x]
-    mods = getUpdates(mods)
-    return
-
-def getUpdates(data):
-    needUpdate = []
-    version = listVersions()
-    for mod in data:
-        print(f"Loading mod #{mod}...", end='\r')
-        time.sleep(3.5)
-        r = requests.get(f'https://api.nexusmods.com/v1/games/cyberpunk2077/mods/{mod}.json', headers={ "Content-Type": "application/json", "apikey": ENV() })
-        r = r.json()
-        print(end=LINE_CLEAR)
-        print(f"{r["name"]}[{str(r["mod_id"])}]: v{str(r["version"])}")
-    
-        ch = version[str(r["mod_id"])]
-        if ch["id"] != r["version"]:
-            needUpdate.append({ "version": ch["id"], "updated_version": r["version"], "name": r["name"], "mod_id": r["mod_id"]})
-            print("Update? ✅")
-        else:
-            print("Update? ❌")
-    
-    updates_count = len([update for update in needUpdate if update])
-    if updates_count > 0:
-        removeAllJsonData("reminder.json")
-        for update in needUpdate:
-            if update:
-                write2JsonFile({ update["mod_id"]: { "name": update["name"], "version": update["version"], "updated_version": update["updated_version"] } }, "reminder.json")
-
-    return print(f"Mods needing updated: {updates_count}")
-
-def updateName(name):
-    pattern = re.compile(r"\-(\d+)\-")
-    m = pattern.findall(str(name))
-    m = next(iter(m or []), "None")
-    
-    if m == "None":
-        pattern = re.compile(r"\((\d+)\)")
-        m = pattern.findall(str(name))
-        m = next(iter(m or []), "None")
-
-    if m == "None":
-        return print(f"[ERR] Unknown mod number for '{name}'")
-    
-    r = requests.get(f'https://api.nexusmods.com/v1/games/cyberpunk2077/mods/{m}.json', headers={ "Content-Type": "application/json", "apikey": ENV() })
-    r = r.json()
-    m = name.replace(f"-{m}", f"-({m})")
-
-    newEntry = {str(r["mod_id"]): {
-        "id": str(r["version"])
-    }}
-
-    write2JsonFile(newEntry, "updates.json")
-    return m
-
-def getReminder():
-    with open('reminder.json', 'r') as openfile:
-        json_object = json.load(openfile)
-
-    return json_object
-
 def installMods(modsDirs):
     modNames = filedialog.askopenfilenames(title="Select mods to install.", filetypes=[('zip files', '*.zip')], initialdir="F:\\Misc\\Cyberpunk Mods")
     for fileName in modNames:
         time.sleep(2)
-        name = updateName(os.path.basename(fileName).replace(".zip",""))
+        name = os.path.basename(fileName).replace(".zip","")
         if json.load(open('mods.json', 'r')).get(name) != None:
             print(f"[ERR] {name} is already installed.")
             continue
@@ -170,7 +84,6 @@ def uninstallMods():
             m = pattern.findall(str(lstMods[int(index)]))
             m = "".join(m)
 
-            removeFromJsonFile(m, "updates.json")
             removeFromJsonFile(lstMods[int(index)])
             print(lstMods[int(index)] + " files removed.")
 
@@ -211,18 +124,6 @@ def startJsonFile():
         toWrite = '{"game":"' + game_path + '"}'
         with open("mods.json", "w") as outfile:
             outfile.write(toWrite)
-
-        with open("updates.json", "w") as outfile:
-            outfile.write("{}")
-
-        with open("reminder.json", "w") as outfile:
-            outfile.write("{}")       
-
-        with open("env.json", "w") as outfile:
-            print("Enter your Nexus Mods Personal API key. Can be found here: https://next.nexusmods.com/settings/api-keys")
-            userInput = input("> ")
-            outfile.write('{"NEXUS_API_KEY":"' + userInput + '"}')
-            os.system('cls')
     elif json.load(open('mods.json', 'r')).get("game") == None:
         exit("Game directory not found inside mods.json")
 
@@ -246,7 +147,6 @@ if __name__ == '__main__':
         print("1. List installed mods in installation order")
         print("2. Install mod(s)")
         print("3. Uninstall mod(s)")
-        print("4. Update Checker")
 
         # PROCESS USER INPUT
         userInput = input("> ")
@@ -257,10 +157,5 @@ if __name__ == '__main__':
                 installMods(modsDirs)
             case "3": # uninstall mods
                 uninstallMods()
-            case "4": # checks for updates
-                updater()          
-            case "stop":
-                if len(getReminder()) > 0:
-                    removeAllJsonData("reminder.json")
         input("Press enter to continue...\n")
         os.system('cls')

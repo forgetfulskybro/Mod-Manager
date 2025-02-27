@@ -140,25 +140,6 @@ def ENV():
     except (FileNotFoundError, KeyError, json.JSONDecodeError):
         return None
 
-def getApiKey():
-    api_key = None
-    while api_key is None or not validateApiKey(api_key):
-        api_key = simpledialog.askstring("Nexus Mods API Key", "Enter your Nexus Mods Personal API key (can be found at https://next.nexusmods.com/settings/api-keys):", parent=root)
-        if api_key is None:
-            log("API key entry cancelled. Exiting.", fatal=True)
-            root.quit()
-            return None
-        if not validateApiKey(api_key):
-            log("Invalid API key. Please try again.", fatal=False)
-    return api_key
-
-def validateApiKey(api_key):
-    if not api_key:
-        return False
-    if len(api_key) < 80 or not re.search(r"[+/=]", api_key):
-      return False
-    return True
-
 def listMods(p = False):
     with open('mods.json', 'r') as openfile:
         json_object = json.load(openfile)
@@ -168,20 +149,6 @@ def listMods(p = False):
            if (p): log(f"{x-1}. {item}")
 
     return json_object
-
-def listVersions():
-    with open('updates.json', 'r') as openfile:
-        json_object = json.load(openfile)
-
-    return json_object
-
-async def fetchModData(mod_id, api_key):
-    url = f'https://api.nexusmods.com/v1/games/cyberpunk2077/mods/{mod_id}.json'
-    headers = {"Content-Type": "application/json", "apikey": api_key}
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers) as response:
-            response.raise_for_status() 
-            return await response.json()
 
 def write2JsonFile(new_data, filename='mods.json'):
     try:
@@ -206,100 +173,7 @@ def removeAllJsonData(filename):
         log(f"File '{filename}' not found.", fatal=True)
     except json.JSONDecodeError:
         log(f"Error decoding JSON in '{filename}'.", fatal=True)
-            
-def updater():
-    jsonMods = listMods()
-    mods = [""]
-    lstMods = [""]
 
-    for item in jsonMods:
-        if item != "game" and item != "mods":
-            lstMods.append(item)
-
-    for mod in jsonMods:
-        pattern = re.compile(r"\((\d+)\)")
-        m = pattern.findall(str(mod))
-        m = "".join(m)
-        mods.append(m)
-
-    mods = [x for x in mods if x]
-    api_key = ENV()
-     
-    def runAsyncTask():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(getUpdates(mods, api_key))
-        loop.close()
-
-    threading.Thread(target=runAsyncTask).start()
-
-
-async def getUpdates(data, api_key):
-    needUpdate = []
-    version = listVersions()
-    for mod_id in data:
-        try:
-            r = await fetchModData(mod_id, api_key)
-            log(f"{r['name']}[{str(r['mod_id'])}]: v{str(r['version'])}")
-
-            ch = version.get(str(r["mod_id"]))
-            if ch and ch["id"] != r["version"]:
-                needUpdate.append({"version": ch["id"], "updated_version": r["version"], "name": r["name"], "mod_id": r["mod_id"]})
-                log("Update? ✅")
-            else:
-                log("Update? ❌")
-            await asyncio.sleep(3.5)
-        except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError, IndexError) as e:
-             log(f"Error processing mod {mod_id}: {e}", fatal=True)
-        except Exception as e:
-            log(f"An unexpected error occurred: {e}", fatal=True)
-
-
-    updates_count = len(needUpdate)
-    if updates_count > 0:
-        removeAllJsonData("reminder.json")
-        for update in needUpdate:
-            write2JsonFile({update["mod_id"]: {"name": update["name"], "version": update["version"], "updated_version": update["updated_version"]}}, "reminder.json")
-
-    log(f"Mods needing updated: {updates_count}", ok=True)
-    updates = getReminder()
-    if updates:
-        updateDisplay(updates)
-    return needUpdate
-
-
-def updateName(name):
-    pattern = re.compile(r"\-(\d+)\-")
-    m = pattern.findall(str(name))
-    m = next(iter(m or []), "None")
-    
-    if m == "None":
-        pattern = re.compile(r"\((\d+)\)")
-        m = pattern.findall(str(name))
-        m = next(iter(m or []), "None")
-
-    if m == "None":
-        return log(f"Unknown mod number for '{name}'", fatal=True)
-    
-    r = requests.get(f'https://api.nexusmods.com/v1/games/cyberpunk2077/mods/{m}.json', headers={ "Content-Type": "application/json", "apikey": ENV() })
-    r = r.json()
-    m = name.replace(f"-{m}", f"-({m})")
-
-    newEntry = {str(r["mod_id"]): {
-        "id": str(r["version"])
-    }}
-
-    write2JsonFile(newEntry, "updates.json")
-    return m
-
-def getReminder():
-    try:
-        with open('reminder.json', 'r') as openfile:
-            json_object = json.load(openfile)
-        return json_object
-    except FileNotFoundError:
-        return {}
-    
 def installMods(modsDirs):
     modNames = filedialog.askopenfilenames(title="Select mods to install.", filetypes=[('zip files', '*.zip')], initialdir=json.load(open('mods.json', 'r')).get("mods"))
     if not modNames:
@@ -354,7 +228,7 @@ def installMods(modsDirs):
 
     async def install_mod(fileName, current, total):
         try:
-            name = updateName(os.path.basename(fileName).replace(".zip",""))
+            name = os.path.basename(fileName).replace(".zip","")
             updateProgress(current, total, f"Installing {name}...")
 
             if json.load(open('mods.json', 'r')).get(name) is not None:
@@ -496,7 +370,6 @@ def uninstallMods():
 
             pattern = re.compile(r"\((\d+)\)")
             mod_id = "".join(pattern.findall(str(mod_to_remove)))
-            removeFromJsonFile(mod_id, "updates.json")
             removeFromJsonFile(mod_to_remove)
             log(f"{mod_to_remove} uninstalled successfully.", ok=True)
         uninstall_window.destroy()
@@ -524,14 +397,6 @@ def removeFromJsonFile(bye, filename='mods.json'):
     except json.JSONDecodeError:
         log(f"Error decoding JSON in '{filename}'.  Is it valid JSON?", fatal=True)
 
-def stopReminders():
-    removeAllJsonData("reminder.json")
-    log("Deleted all reminders.", ok=True)
-    global button5 
-    if button5:
-        button5.destroy()
-        button5 = None
-
 def startJsonFile():
     if not os.path.exists("mods.json"):
         log("Select game installation folder.")
@@ -544,10 +409,6 @@ def startJsonFile():
         log("Select a folder where you store your Cyberpunk mods.")
         mods_path = filedialog.askdirectory(title="Select a folder where you store your Cyberpunk mods.")
 
-        api_key = getApiKey()
-        if api_key is None:
-            return
-
         if mods_path is not None:
             toWrite = f'{{"game":"{game_path}", "mods":"{mods_path}"}}'
         else:
@@ -556,19 +417,6 @@ def startJsonFile():
         with open("mods.json", "w") as outfile:
             outfile.write(toWrite)
             log("Created mods.json to store all mod data.", ok=True)
-
-        with open("updates.json", "w") as outfile:
-            outfile.write("{}")
-            log("Created updates.json to store all update data.", ok=True)
-
-        with open("reminder.json", "w") as outfile:
-            outfile.write("{}")
-            log("Created reminder.json to store all reminder data.", ok=True)
-
-        with open("env.json", "w") as outfile:
-            toWrite = f'{{"NEXUS_API_KEY":"{api_key}"}}'
-            outfile.write(toWrite)
-            log("Created env.json to store your Nexus Mods API key.", ok=True)
     elif json.load(open('mods.json', 'r')).get("game") is None:
         log("Game directory not found inside mods.json", fatal=True)
         root.quit()
@@ -586,26 +434,7 @@ button2.grid(row=0, column=1, padx=10, pady=5)
 button3 = ttk.Button(button_frame, text="Uninstall Mod(s)", command=uninstallMods, width=20, style="TButton")
 button3.grid(row=1, column=0, padx=10, pady=5)
 
-button4 = ttk.Button(button_frame, text="Update Checker", command=updater, width=20, style="TButton")
-button4.grid(row=1, column=1, padx=10, pady=5)
-
-button5 = None
-if len(getReminder()) > 0:
-    button5 = ttk.Button(button_frame, text="Stop Reminders", command=stopReminders, width=20, style="TButton")
-    button5.grid(row=1, column=3, padx=10, pady=5)
-
-def updateDisplay(updates):
-    log("‼️ MOD UPDATES AVAILABLE ‼️", remind=True, remindColor="red")
-    for mod_id, data in updates.items():
-        log(f"{data['name']} ({mod_id}): Version {data['version']} -> {data['updated_version']}", remind=True, url=f"https://nexusmods.com/cyberpunk2077/mods/{mod_id}")
-
-def displayUpdatesOnStart():
-    updates = getReminder()
-    if updates:
-        updateDisplay(updates)
-
 if __name__ == '__main__':
     startJsonFile()
     modsDirs = ["archive", "bin", "engine", "mods", "r6", "red4ext", "tools"]
-    displayUpdatesOnStart()
     root.mainloop()
