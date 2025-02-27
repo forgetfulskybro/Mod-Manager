@@ -27,7 +27,7 @@ Drag and drop the script wherever you want, I recommend keeping this script on t
 **[2nd step]**
 When launching the script for the first time, a window will prompt asking you to select the game installation path. i.e. C:/SteamLibrary/steamapps/common/Cyberpunk 2077
 
-**[3th step]**
+**[3rd step]**
 When installing mods, multiple zips can be selected. When uninstalling mods, multiple mods can be uninstalled.
 
 
