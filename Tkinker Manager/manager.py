@@ -66,6 +66,22 @@ style.configure(
     font=('Segoe UI', 10)
 )
 
+style.configure(
+    "TEntry",
+    background=COLORS['bg_medium'],
+    foreground=COLORS['text'],
+    fieldbackground=COLORS['bg_medium'],
+    insertcolor=COLORS['text'],
+    borderwidth=1,
+    relief="solid"
+)
+
+style.map(
+    "TEntry",
+    background=[('focus', COLORS['bg_light'])],
+    fieldbackground=[('focus', COLORS['bg_light'])]
+)
+
 main_container = Frame(root, bg=COLORS['bg_dark'])
 main_container.pack(fill="both", expand=True, padx=20, pady=20)
 
@@ -452,6 +468,46 @@ def uninstallMods():
     )
     title_label.pack(pady=(0, 15))
 
+    search_frame = Frame(container, bg=COLORS['bg_dark'])
+    search_frame.pack(fill="x", pady=(0, 10))
+
+    search_entry = ttk.Entry(
+        search_frame,
+        style="TEntry",
+        font=('Segoe UI', 10)
+    )
+    search_entry.pack(side="left", fill="x", expand=True)
+    search_entry.insert(0, "Search mods")
+    search_entry.config(foreground='gray')
+
+    def on_entry_focus_in(event):
+        if search_entry.get() == "Search mods":
+            search_entry.delete(0, tk.END)
+            search_entry.config(foreground='white')
+
+    def on_entry_focus_out(event):
+        if not search_entry.get():
+            search_entry.insert(0, "Search mods")
+            search_entry.config(foreground='gray')
+
+    search_entry.bind('<FocusIn>', on_entry_focus_in)
+    search_entry.bind('<FocusOut>', on_entry_focus_out)
+
+    def update_mod_list(event=None):
+        search_text = search_entry.get().lower()
+        if search_text == "search mods":
+            search_text = ""
+        mod_listbox.delete(0, tk.END)
+        mod_listbox.mapping = {}
+        listbox_index = 0
+        for i, mod_name in enumerate(lstMods):
+            if search_text in mod_name.lower():
+                mod_listbox.insert(tk.END, mod_name)
+                mod_listbox.mapping[listbox_index] = i
+                listbox_index += 1
+
+    search_entry.bind('<KeyRelease>', update_mod_list)
+
     mod_frame = Frame(container, bg=COLORS['bg_medium'], bd=1, relief="solid")
     mod_frame.pack(fill="both", expand=True)
 
@@ -482,13 +538,13 @@ def uninstallMods():
             log("No mods selected for uninstallation.", fatal=False)
             return
 
-        for index in selected_indices:
-            mod_to_remove = lstMods[index]
+        for listbox_index in selected_indices:
+            original_index = getattr(mod_listbox, 'mapping', {}).get(listbox_index, listbox_index)
+            mod_to_remove = lstMods[original_index]
             for file in jsonMods.get(mod_to_remove, []):
                 file_path = json.load(open('mods.json', 'r')).get("game") + (file if file.startswith("/") else "/" + file)
                 try:
                     os.remove(file_path)
-                    log(f"{file_path}", delete=True)
                 except FileNotFoundError:
                     log(f"File not found: {file_path}", fatal=True)
                 except OSError as e:
