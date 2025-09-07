@@ -1,5 +1,5 @@
-A new version of the Mod Manager has been released. This new version uses Tkinker which is a UI toolkit for Python.
-Can be found in the [Tkinker Manager folder](https://github.com/forgetfulskybro/Mod-Manager/tree/main/Tkinker%20Manager).
+A new version of the Mod Manager has been released. This new version uses Tkinter which is a UI toolkit for Python.
+Can be found in the [Tkinter Manager folder](https://github.com/forgetfulskybro/Mod-Manager/tree/main/Tkinker%20Manager).
 
 
 
