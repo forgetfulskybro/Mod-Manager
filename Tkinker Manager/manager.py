@@ -1,7 +1,6 @@
 import os
 import re
 import json
-import time
 import random
 import zipfile
 import requests, webbrowser
@@ -114,6 +113,89 @@ log_text.pack(side="left", fill="both", expand=True)
 scrollbar = Scrollbar(log_frame, command=log_text.yview)
 scrollbar.pack(side="right", fill="y")
 log_text.config(yscrollcommand=scrollbar.set)
+
+search_window = None
+current_search_pos = '1.0'
+search_results = []
+current_result_index = 0
+
+def open_search_box(event=None):
+    global search_window
+    if search_window is not None and search_window.winfo_exists():
+        search_window.focus()
+        return
+
+    search_window = tk.Toplevel(root)
+    search_window.title("Search")
+    search_window.geometry("300x100")
+    search_window.configure(bg=COLORS['bg_dark'])
+    
+    search_window.update_idletasks()
+    sw = search_window.winfo_screenwidth()
+    sh = search_window.winfo_screenheight()
+    ww = search_window.winfo_width()
+    wh = search_window.winfo_height()
+    search_window.geometry(f"+{(sw-ww)//2}+{(sh-wh)//2}")
+
+    search_frame = Frame(search_window, bg=COLORS['bg_dark'])
+    search_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+    search_entry = ttk.Entry(search_frame, style="TEntry")
+    search_entry.pack(fill="x", pady=(0, 5))
+    search_entry.focus()
+
+    def perform_search():
+        global current_search_pos, search_results, current_result_index
+        log_text.tag_remove("search", "1.0", tk.END)
+        search_results = []
+        current_result_index = 0
+        
+        query = search_entry.get().lower()
+        if not query:
+            return
+
+        current_search_pos = '1.0'
+        while True:
+            current_search_pos = log_text.search(query, current_search_pos, tk.END, nocase=True)
+            if not current_search_pos:
+                break
+            search_results.append(current_search_pos)
+            end_pos = f"{current_search_pos}+{len(query)}c"
+            log_text.tag_add("search", current_search_pos, end_pos)
+            current_search_pos = end_pos
+
+        log_text.tag_configure("search", background=COLORS['warning'], foreground=COLORS['bg_dark'])
+        if search_results:
+            current_result_index = 0
+            log_text.see(search_results[0])
+
+    def next_result():
+        global current_result_index
+        if not search_results:
+            return
+        current_result_index = (current_result_index + 1) % len(search_results)
+        log_text.see(search_results[current_result_index])
+
+    def prev_result():
+        global current_result_index
+        if not search_results:
+            return
+        current_result_index = (current_result_index - 1) % len(search_results)
+        log_text.see(search_results[current_result_index])
+
+    search_button = ttk.Button(search_frame, text="Find", command=perform_search)
+    search_button.pack(side="left", padx=(0, 3))
+
+    next_button = ttk.Button(search_frame, text="Next", command=next_result)
+    next_button.pack(side="left", padx=(0, 3))
+
+    prev_button = ttk.Button(search_frame, text="Previous", command=prev_result)
+    prev_button.pack(side="left")
+
+    search_entry.bind("<Return>", lambda e: perform_search())
+    search_window.bind("<Escape>", lambda e: search_window.destroy())
+    search_window.transient(root)
+    search_window.grab_set()
 
 def callback(url):
     webbrowser.open_new(url)
@@ -269,6 +351,8 @@ async def getUpdates(data, api_key):
              log(f"Error processing mod {mod_id}: {e}", fatal=True)
         except Exception as e:
             log(f"An unexpected error occurred: {e}", fatal=True)
+            if e == "Expecting value: line 1 column 1 (char 0)":
+                log(f"This error ocurrs when Nexus Mods has API/IP banned your account. You may have access to Nexus still but using their API is not possible unless you contact their support: support@nexusmods.com", fatal=True)
 
 
     updates_count = len(needUpdate)
@@ -298,6 +382,8 @@ def updateName(name):
         return log(f"Unknown mod number for '{name}'", fatal=True)
     
     r = requests.get(f'https://api.nexusmods.com/v1/games/cyberpunk2077/mods/{m}.json', headers={ "Content-Type": "application/json", "apikey": ENV() })
+    # if r.status_code != 200:
+    #     return log(f"Status Code: {r.status_code}")
     r = r.json()
     m = name.replace(f"-{m}", f"-({m})")
 
@@ -500,11 +586,11 @@ def uninstallMods():
         mod_listbox.delete(0, tk.END)
         mod_listbox.mapping = {}
         listbox_index = 0
-        for i, mod_name in enumerate(lstMods):
-            if search_text in mod_name.lower():
-                mod_listbox.insert(tk.END, mod_name)
-                mod_listbox.mapping[listbox_index] = i
-                listbox_index += 1
+        mod_items = [(i, mod_name) for i, mod_name in enumerate(lstMods) if search_text in mod_name.lower()]
+        for i, mod_name in mod_items:
+            mod_listbox.insert(tk.END, mod_name)
+            mod_listbox.mapping[listbox_index] = i 
+            listbox_index += 1
 
     search_entry.bind('<KeyRelease>', update_mod_list)
 
@@ -522,15 +608,13 @@ def uninstallMods():
         width=40,
         height=15
     )
-    for i, mod_name in enumerate(lstMods):
-        mod_listbox.insert(i, mod_name)
     mod_listbox.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-
 
     scrollbar = Scrollbar(mod_frame, orient="vertical", command=mod_listbox.yview)
     scrollbar.pack(side="right", fill="y")
     mod_listbox.config(yscrollcommand=scrollbar.set)
 
+    update_mod_list()
 
     def doUninstall():
         selected_indices = mod_listbox.curselection()
@@ -538,11 +622,15 @@ def uninstallMods():
             log("No mods selected for uninstallation.", fatal=False)
             return
 
+        with open('mods.json', 'r') as f:
+            mods_data = json.load(f)
+        game_path = mods_data.get("game", "")
+
         for listbox_index in selected_indices:
-            original_index = getattr(mod_listbox, 'mapping', {}).get(listbox_index, listbox_index)
+            original_index = mod_listbox.mapping.get(listbox_index, listbox_index)
             mod_to_remove = lstMods[original_index]
             for file in jsonMods.get(mod_to_remove, []):
-                file_path = json.load(open('mods.json', 'r')).get("game") + (file if file.startswith("/") else "/" + file)
+                file_path = game_path + (file if file.startswith("/") else "/" + file)
                 try:
                     os.remove(file_path)
                 except FileNotFoundError:
@@ -559,7 +647,6 @@ def uninstallMods():
 
     uninstall_button = ttk.Button(uninstall_window, text="Uninstall Selected", command=doUninstall, style="TButton", width=20)
     uninstall_button.pack(pady=10)
-
 
     uninstall_window.transient(root)
     uninstall_window.focus_force()
@@ -664,4 +751,5 @@ if __name__ == '__main__':
     startJsonFile()
     modsDirs = ["archive", "bin", "engine", "mods", "r6", "red4ext", "tools"]
     displayUpdatesOnStart()
+    root.bind("<Control-f>", open_search_box)
     root.mainloop()
