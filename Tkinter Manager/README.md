@@ -1,8 +1,8 @@
 # Mod-Manager
-Cyberpunk 2077 Tkinker based Mod Manager
+Cyberpunk 2077 Tkinter based Mod Manager
 - Main files are from [Mod Manager from Nexus Mods](https://www.nexusmods.com/cyberpunk2077/mods/10826)
 - Adds functionality to the process to check for mod updates and reminder to update mods.
-- This new version uses Tkinker which is a UI toolkit for Python. Instead of a terminal it has an interface.
+- This new version uses Tkinter which is a UI toolkit for Python. Instead of a terminal it has an interface.
 
 ## Files ##
 **[manager.py]**
@@ -47,8 +47,8 @@ Updater can only be used when mods are currently added to Cyberpunk 2077. Make s
 **[Requests]**
 This is a python library that allows the script to check for mod updates. This library is not included in the script, so it must be installed manually. To install it, run the following command in your terminal: `pip install requests`
 
-**[Tkinker]**
-This is a python library that allows the script to run. This library is not included in the script, so it must be installed manually. To install it, run the following command in your terminal: `pip install tkinker`
+**[Tkinter]**
+This is a python library that allows the script to run. This library is not included in the script, so it must be installed manually. To install it, run the following command in your terminal: `pip install tkinter`
 
 **[Aiohttp]**
 This is a python library that allows the script to check for mod updates. This library is not included in the script, so it must be installed manually. To install it, run the following command in your terminal: `pip install aiohttp`
