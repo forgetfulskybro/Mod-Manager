@@ -305,7 +305,21 @@ def removeAllJsonData(filename):
     except json.JSONDecodeError:
         log(f"Error decoding JSON in '{filename}'.", fatal=True)
             
+_current_thread = None
+_current_task = None
+_is_running = False
+_lock = threading.Lock()
+
 def updater():
+    global _current_thread, _current_task, _is_running
+    with _lock:
+        if _is_running:
+            if _current_task and not _current_task.done():
+                _current_task.cancel()
+            return
+
+        _is_running = True
+
     jsonMods = listMods()
     mods = [""]
     lstMods = [""]
@@ -322,15 +336,41 @@ def updater():
 
     mods = [x for x in mods if x]
     api_key = ENV()
-     
-    def runAsyncTask():
+
+    async def async_task():
+        global _current_task, _is_running
+
+        try:
+            await getUpdates(mods, api_key)
+        except asyncio.CancelledError:
+            raise
+        finally:
+            with _lock:
+                _is_running = False
+                _current_task = None
+                _current_thread = None
+
+    def run_async_task():
+        global _current_task, _current_thread
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(getUpdates(mods, api_key))
-        loop.close()
+        _current_task = loop.create_task(async_task())
 
-    threading.Thread(target=runAsyncTask).start()
+        try:
+            loop.run_until_complete(_current_task)
+        except asyncio.CancelledError:
+            log("Updater was cancelled.", ok=True)
+            button4 = ttk.Button(button_frame, text="Update Checker", command=updater, width=20, style="TButton")
+            button4.grid(row=1, column=1, padx=10, pady=5)
+            pass
+        finally:
+            loop.close()
 
+    _current_thread = threading.Thread(target=run_async_task, daemon=True)
+    _current_thread.start()
+    
+    button4 = ttk.Button(button_frame, text="Cancel Updater", command=updater, width=20, style="TButton")
+    button4.grid(row=1, column=1, padx=10, pady=5)
 
 async def getUpdates(data, api_key):
     needUpdate = []
