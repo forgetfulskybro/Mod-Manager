@@ -403,8 +403,12 @@ async def getUpdates(data, api_key):
 
     log(f"Mods needing updated: {updates_count}", ok=True)
     updates = getReminder()
+    button4 = ttk.Button(button_frame, text="Update Checker", command=updater, width=20, style="TButton")
+    button4.grid(row=1, column=1, padx=10, pady=5)
     if updates:
         updateDisplay(updates)
+        button5 = ttk.Button(button_frame, text="Stop Reminders", command=lambda: [stopReminders(), button5.destroy()], width=20, style="TButton")
+        button5.grid(row=1, column=3, padx=10, pady=5)
     return needUpdate
 
 
@@ -412,23 +416,28 @@ def updateName(name):
     pattern = re.compile(r"\-(\d+)\-")
     m = pattern.findall(str(name))
     m = next(iter(m or []), "None")
+    id = m
     
-    if m == "None":
-        pattern = re.compile(r"\((\d+)\)")
-        m = pattern.findall(str(name))
-        m = next(iter(m or []), "None")
+    version = re.compile(r'-(\d+)-(.+?)(?:-\d{9,11})?$')
+    v = re.search(version, str(name))
+    v = v.group(2) if v else "None"
+    
+    # if m == "None":
+    #     pattern = re.compile(r"\((\d+)\)")
+    #     m = pattern.findall(str(name))
+    #     m = next(iter(m or []), "None")
 
     if m == "None":
         return log(f"Unknown mod number for '{name}'", fatal=True)
     
-    r = requests.get(f'https://api.nexusmods.com/v1/games/cyberpunk2077/mods/{m}.json', headers={ "Content-Type": "application/json", "apikey": ENV() })
-    # if r.status_code != 200:
-    #     return log(f"Status Code: {r.status_code}")
-    r = r.json()
+    if v == "None":
+        r = requests.get(f'https://api.nexusmods.com/v1/games/cyberpunk2077/mods/{m}.json', headers={ "Content-Type": "application/json", "apikey": ENV() })
+        r = r.json()
+        v = str(r["version"])
+        
     m = name.replace(f"-{m}", f"-({m})")
-
-    newEntry = {str(r["mod_id"]): {
-        "id": str(r["version"])
+    newEntry = {id: {
+        "id": v
     }}
 
     write2JsonFile(newEntry, "updates.json")
@@ -710,10 +719,6 @@ def removeFromJsonFile(bye, filename='mods.json'):
 def stopReminders():
     removeAllJsonData("reminder.json")
     log("Deleted all reminders.", ok=True)
-    global button5 
-    if button5:
-        button5.destroy()
-        button5 = None
 
 def startJsonFile():
     if not os.path.exists("mods.json"):
@@ -774,7 +779,7 @@ button4.grid(row=1, column=1, padx=10, pady=5)
 
 button5 = None
 if len(getReminder()) > 0:
-    button5 = ttk.Button(button_frame, text="Stop Reminders", command=stopReminders, width=20, style="TButton")
+    button5 = ttk.Button(button_frame, text="Stop Reminders", command=lambda: [stopReminders(), button5.destroy()], width=20, style="TButton")
     button5.grid(row=1, column=3, padx=10, pady=5)
 
 def updateDisplay(updates):
